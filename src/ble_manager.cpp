@@ -2,7 +2,7 @@
 #include <ArduinoBLE.h>
 
 BLEService testService("180D");
-BLECharacteristic testCharacteristic("2A37", BLERead | BLENotify, 2);
+BLECharacteristic testCharacteristic("00002a37-0000-1000-8000-00805f9b34fb", BLERead | BLENotify, 2);
 
 bool isBLEConnected();
 int getLastValue();
@@ -45,7 +45,13 @@ void loopBLE(){
         bleConnected = false;
         M5.Lcd.println("Client disconnected");
     }
+
+    if (!bleConnected) {
+    BLE.advertise();
+    }
+
 }
+
 
 bool isBLEConnected(){
     return bleConnected;
