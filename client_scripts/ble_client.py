@@ -1,28 +1,111 @@
-import asyncio
-from bleak import BleakClient, BleakScanner
+import time
+import dbus
+import dbus.mainloop.glib
+try:
+    from gi.repository import GLib
+except ImportError:
+    import gobject as GLib
 
-DEVICE_ADDRESS = "14:2b:2f:b0:70:c0"
-CHARACTERISTIC_UUID = "00002a37-0000-1000-8000-00805f9b34fb"
+TARGET_DEVICE = "14:2B:2F:B0:70:C2"
+SERVICE_UUID = "34d9a23f-2249-42a3-bb7e-6aa0640154a9"  
+CHARACTERISTIC_UUID = "92b5d163-1322-4be4-b163-f775e211259f"  
 
-async def run():
-    try:
-        device = await BleakScanner.find_device_by_address(DEVICE_ADDRESS, timeout=20.0)
+def get_managed_objects():
+    bus = dbus.SystemBus()
+    manager = dbus.Interface(bus.get_object("org.bluez", "/"),
+                             "org.freedesktop.DBus.ObjectManager")
+    return manager.GetManagedObjects()
+
+def find_device(devices, device_address):
+    for path, ifaces in devices.items():
+        device = ifaces.get("org.bluez.Device1")
         if device is None:
-            print(f"No se pudo encontrar el dispositivo con la dirección {DEVICE_ADDRESS}")
+            continue
+        if device["Address"] == device_address:
+            obj = bus.get_object("org.bluez", path)
+            return dbus.Interface(obj, "org.bluez.Device1")
+    return None
+
+def find_characteristic(device_path, service_uuid, characteristic_uuid):
+    bus = dbus.SystemBus()
+    objects = get_managed_objects()
+    for path, ifaces in objects.items():
+        if path.startswith(device_path):
+            chrc = ifaces.get("org.bluez.GattCharacteristic1", {})
+            if chrc.get("UUID") == characteristic_uuid:
+                return path
+    return None
+
+def read_characteristic(characteristic_path):
+    bus = dbus.SystemBus()
+    chrc = bus.get_object("org.bluez", characteristic_path)
+    chrc_iface = dbus.Interface(chrc, "org.bluez.GattCharacteristic1")
+    value = chrc_iface.ReadValue({})
+    return bytes(value)
+
+def write_characteristic(characteristic_path, value):
+    bus = dbus.SystemBus()
+    chrc = bus.get_object("org.bluez", characteristic_path)
+    chrc_iface = dbus.Interface(chrc, "org.bluez.GattCharacteristic1")
+    chrc_iface.WriteValue(value, {})
+
+def connect_and_communicate():
+    bus = dbus.SystemBus()
+    adapter = dbus.Interface(bus.get_object("org.bluez", "/org/bluez/hci0"), "org.bluez.Adapter1")
+    
+    print(f"Buscando dispositivo: {TARGET_DEVICE}")
+    adapter.StartDiscovery()
+    
+    try:
+        print("Esperando a que el dispositivo sea descubierto...")
+        time.sleep(20)
+        
+        devices = get_managed_objects()
+        device = find_device(devices, TARGET_DEVICE)
+        
+        if device is None:
+            print("Dispositivo no encontrado")
             return
 
-        async with BleakClient(device) as client:
-            print(f"Conectado: {client.is_connected}")
+        print("Dispositivo encontrado. Intentando conectar...")
+        device.Connect()
+        print("Conectado exitosamente")
 
-            def notification_handler(sender, data):
-                value = int.from_bytes(data, byteorder='little')
-                print(f"Valor recibido: {value}")
+        print("Buscando característica...")
+        time.sleep(10)
+        char_path = find_characteristic(device.object_path, SERVICE_UUID, CHARACTERISTIC_UUID)
+        if char_path is None:
+            print("Característica no encontrada")
+            return
 
-            await client.start_notify(CHARACTERISTIC_UUID, notification_handler)
-            print("Escuchando notificaciones. Presiona Ctrl+C para salir.")
-            while True:
-                await asyncio.sleep(1.0)
+        print("Característica encontrada. Leyendo valor...")
+        value = read_characteristic(char_path)
+        print(f"Valor leído: {value}")
+        #TO-DO Recoger valor leido y meterlo en una cola
+
+        '''
+        print("Escribiendo un nuevo valor...")
+        new_value = [0x48, 0x65, 0x6C, 0x6C, 0x6F]  # "Hello" en ASCII
+        write_characteristic(char_path, new_value)
+        print("Valor escrito exitosamente")
+        '''
+        
     except Exception as e:
-        print(f"Ocurrió un error: {e}")
+        print(f"Error: {str(e)}")
+    finally:
+        adapter.StopDiscovery()
 
-asyncio.run(run())
+if __name__ == '__main__':
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    bus = dbus.SystemBus()
+    mainloop = GLib.MainLoop()
+    
+    connect_and_communicate()
+    
+    print("Presiona Ctrl+C para salir.")
+    try:
+        mainloop.run()
+    except KeyboardInterrupt:
+        print("Programa terminado por el usuario.")
+
+    

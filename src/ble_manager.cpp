@@ -1,8 +1,8 @@
 #include <M5StickCPlus2.h>
 #include <ArduinoBLE.h>
 
-BLEService testService("180D");
-BLECharacteristic testCharacteristic("00002a37-0000-1000-8000-00805f9b34fb", BLERead | BLENotify, 2);
+BLEService testService("34d9a23f-2249-42a3-bb7e-6aa0640154a9");
+BLECharacteristic testCharacteristic("92b5d163-1322-4be4-b163-f775e211259f", BLERead | BLENotify, 2);
 
 bool isBLEConnected();
 int getLastValue();
