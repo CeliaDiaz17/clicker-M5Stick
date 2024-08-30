@@ -1,15 +1,21 @@
 #ifndef BLE_MANAGER_H
 #define BLE_MANAGER_H
+#include <Arduino.h>
 
-class BLEService;
-class BLECharacteristic;
+class BLEManager {
+    public:
+        void setupBLE();
+        void loopBLE();
+        bool isBLEConnected();
+        int getLastValue();
+        void writeValueToCharacteristic(const char* value);
+    
+    private:
+        BLEService testService;
+        BLECharacteristic testCharacteristic;
+        bool bleConnected;
+        int lastValue;
 
-extern BLEService testService;
-extern BLECharacteristic testCharacteristic;
-
-void setupBLE();
-void loopBLE();
-bool isBLEConnected();
-int getLastValue();
+};
 
 #endif // BLE_MANAGER_H
