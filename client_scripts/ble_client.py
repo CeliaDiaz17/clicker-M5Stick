@@ -1,6 +1,7 @@
 import time
 import dbus
 import dbus.mainloop.glib
+import sys
 try:
     from gi.repository import GLib
 except ImportError:
@@ -36,18 +37,29 @@ def find_characteristic(device_path, service_uuid, characteristic_uuid):
                 return path
     return None
 
-def read_characteristic(characteristic_path):
-    bus = dbus.SystemBus()
-    chrc = bus.get_object("org.bluez", characteristic_path)
-    chrc_iface = dbus.Interface(chrc, "org.bluez.GattCharacteristic1")
-    value = chrc_iface.ReadValue({})
-    return bytes(value)
 
+def read_characteristic(characteristic_path):
+    try:
+        bus = dbus.SystemBus()
+        chrc = bus.get_object("org.bluez", characteristic_path)
+        chrc_iface = dbus.Interface(chrc, "org.bluez.GattCharacteristic1")
+        
+        value = chrc_iface.ReadValue({})
+        return bytes(value)
+    except dbus.exceptions.DBusException as e:
+        print(f"Error del D-Bus al leer la caracteristica: {str(e)}")
+    except Exception as e:
+        print(f"Error al leer el valor de la caracteristica: {str(e)}")
+    return None
+    
+
+'''
 def write_characteristic(characteristic_path, value):
     bus = dbus.SystemBus()
     chrc = bus.get_object("org.bluez", characteristic_path)
     chrc_iface = dbus.Interface(chrc, "org.bluez.GattCharacteristic1")
     chrc_iface.WriteValue(value, {})
+'''
 
 def connect_and_communicate():
     bus = dbus.SystemBus()
@@ -77,6 +89,7 @@ def connect_and_communicate():
         if char_path is None:
             print("Característica no encontrada")
             return
+        time.sleep(10)
 
         print("Característica encontrada. Leyendo valor...")
         value = read_characteristic(char_path)
