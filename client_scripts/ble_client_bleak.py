@@ -1,3 +1,9 @@
+'''
+Based on: https://github.com/hbldh/bleak/tree/develop/examples 
+This class is designed to connect to a BLE device and read its services and features.
+In addition, a queue has been implemented to store the read values of the features.
+'''
+
 import asyncio
 from bleak import BleakClient, BleakScanner
 from queue import Queue
@@ -45,6 +51,7 @@ async def main(address):
         address = address_queue.get()
         await scan_device(address)
         
+    #mostrar cola con datos finales
     print("Data in queue:")
     for item in data_list:
         print(item)

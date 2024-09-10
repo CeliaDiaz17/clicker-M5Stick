@@ -1,3 +1,7 @@
+/*
+This class implements a BLE peripheral that allows to select an option from a list of options using the buttons of the M5StickC Plus 2.
+*/
+
 #include <M5StickCPlus2.h>
 #include <ArduinoBLE.h>
 #include <string.h>
