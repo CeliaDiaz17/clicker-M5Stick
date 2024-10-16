@@ -25,10 +25,13 @@ private:
     static BLEManager* instance;
     BLEService testService;
     BLEUnsignedCharCharacteristic testCharacteristic;
+    BLEDescriptor* testDescriptor;
 
     BLEManager() : 
         testService("34d9a23f-2249-42a3-bb7e-6aa0640154a9"),
-        testCharacteristic("92b5d163-1322-4be4-b163-f775e211259f", BLERead | BLEWrite) {}
+        testCharacteristic("92b5d163-1322-4be4-b163-f775e211259f", BLERead | BLEWrite),
+        testDescriptor(new BLEDescriptor("2901", "clicker"))  {}      
+
 
 public:
     static BLEManager* getInstance() {
@@ -45,6 +48,7 @@ public:
         }
         BLE.setLocalName("M5StickCPlus2");
         BLE.setAdvertisedService(testService);
+        testCharacteristic.addDescriptor(*testDescriptor);
         testService.addCharacteristic(testCharacteristic);
         BLE.addService(testService);
         BLE.advertise();
@@ -70,6 +74,7 @@ public:
     bool canWrite() {
         return testCharacteristic.canWrite();
     }
+
 };
 
 BLEManager* BLEManager::instance = nullptr;
