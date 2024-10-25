@@ -54,6 +54,15 @@ public:
         BLE.advertise();
     }
 
+    void updateAdvertising(unsigned char* opcion) {
+        BLE.stopAdvertise();
+        byte manufacturerData[1];
+        manufacturerData[0] = 'A' + opcionActual; //si la opcion falla revisar esto
+        //manufacturerData[1] = strlen(opcion);
+        BLE.setManufacturerData(manufacturerData, sizeof(manufacturerData));
+        BLE.advertise();
+    }
+
     void loopBLE() {
       BLEDevice central = BLE.central();
       if (central) {
@@ -110,7 +119,7 @@ void setup() {
 
 void loop() {
     M5.update();
-    BLEManager::getInstance()->loopBLE();
+    BLEManager::getInstance()->loopBLE(); // NO VUELVAS A COMENTAR ESTA LINEA 
 
     if(M5.BtnB.wasDoubleClicked()) {
         reiniciarPantalla();
@@ -127,6 +136,7 @@ void loop() {
             M5.Lcd.setCursor(0, 0);
             M5.Lcd.printf("La opcion %c ha sido seleccionada", 'A' + opcionActual);
             
+            
             unsigned char valor = 'A' + opcionActual;
             
             bool writeSuccess = BLEManager::getInstance()->writeCharacteristic(valor);
@@ -138,6 +148,12 @@ void loop() {
                     M5.Lcd.println("La caracteristica no esta lista para escribir");
                 }
             }
+    
+           //const char* opcion = opciones[opcionActual];
+           unsigned char valorASCII = 'A' + opcionActual;
+           BLEManager::getInstance()->updateAdvertising(&valorASCII);
+
+           M5.Lcd.printf("\nEnviando opcion: %c en el advertising", valorASCII);
         }
     }
 
