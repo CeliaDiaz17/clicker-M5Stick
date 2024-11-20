@@ -121,8 +121,15 @@ void loop() {
     M5.update();
     BLEManager::getInstance()->loopBLE(); // NO VUELVAS A COMENTAR ESTA LINEA 
 
-    if(M5.BtnB.wasDoubleClicked()) {
+    if(M5.BtnB.wasHold()) {
         reiniciarPantalla();
+    }
+
+    if(opcionSeleccionada) {
+        unsigned long tiempoActual = millis();
+        if (tiempoActual - tiempoSeleccion >= 12000){
+            reiniciarPantalla();
+        }
     }
 
     if (!opcionSeleccionada) {
@@ -132,10 +139,11 @@ void loop() {
         }
         if (M5.BtnA.wasPressed()) {
             opcionSeleccionada = true;
+            tiempoSeleccion = millis();
+
             M5.Lcd.clear();
             M5.Lcd.setCursor(0, 0);
             M5.Lcd.printf("La opcion %c ha sido seleccionada", 'A' + opcionActual);
-            
             
             unsigned char valor = 'A' + opcionActual;
             
@@ -148,7 +156,7 @@ void loop() {
                     M5.Lcd.println("La caracteristica no esta lista para escribir");
                 }
             }
-    
+  
            //const char* opcion = opciones[opcionActual];
            unsigned char valorASCII = 'A' + opcionActual;
            BLEManager::getInstance()->updateAdvertising(&valorASCII);
