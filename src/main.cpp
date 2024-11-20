@@ -11,7 +11,7 @@ void mostrarOpciones();
 void reiniciarPantalla();
 
 // Declaraciones globales
-const char* opciones[] = {"Opcion A", "Opcion B", "Opcion C"};
+const char* opciones[] = {"A", "B", "C"};
 int numOpciones = 3;
 int opcionActual = -1;
 bool opcionSeleccionada = false;
@@ -90,14 +90,25 @@ BLEManager* BLEManager::instance = nullptr;
 
 void mostrarOpciones() {
     M5.Lcd.clear();
-    M5.Lcd.setCursor(0, 0);
+    //M5.Lcd.setCursor(0, 0);
+    M5.Lcd.setTextSize(6);
+
+    int x = 10;
+    int y = 50;
+
     for (int i = 0; i < numOpciones; i++) {
         if (i == opcionActual) {
-            M5.Lcd.print("> ");
+            M5.Lcd.setTextColor(YELLOW); // White text on yellow background
         } else {
-            M5.Lcd.print("  ");
+            M5.Lcd.setTextColor(WHITE); // Default white text on black background
         }
+        
+        M5.Lcd.setCursor(x, y);
         M5.Lcd.println(opciones[i]);
+        M5.Lcd.print(" ");
+
+        x += strlen(opciones[i]) * 12 + 70; // Avanza la posición X
+
     }
 }
 
@@ -105,6 +116,12 @@ void reiniciarPantalla() {
     opcionActual = 0;
     opcionSeleccionada = false;
     mostrarOpciones();
+}
+
+void dibujarFlechaAbajo(int x, int y) {
+    M5.Lcd.drawLine(x, y, x, y+15);      // Línea vertical
+    M5.Lcd.drawLine(x, y+20, x-5, y+15); // Punta izquierda
+    M5.Lcd.drawLine(x, y+20, x+5, y+15); // Punta derecha
 }
 
 void setup() {
@@ -142,26 +159,28 @@ void loop() {
             tiempoSeleccion = millis();
 
             M5.Lcd.clear();
-            M5.Lcd.setCursor(0, 0);
-            M5.Lcd.printf("La opcion %c ha sido seleccionada", 'A' + opcionActual);
+            M5.Lcd.setTextColor(WHITE);
+            M5.Lcd.setTextSize(2);
+            M5.Lcd.setCursor(10,10);
+            M5.Lcd.printf("Opcion seleccionada");
+
+            M5.Lcd.setTextSize(6);
+            M5.Lcd.setCursor(100,50);
+            M5.Lcd.printf("%c", 'A'+opcionActual);
+
+            M5.Lcd.setTextSize(1.5);
+            M5.Lcd.setCursor(60, 110);
+            M5.Lcd.printf("Pulsa ");
+            dibujarFlechaAbajo(M5.Lcd.getCursorX(), M5.Lcd.getCursorY());
+            M5.Lcd.printf(" para volver");
             
             unsigned char valor = 'A' + opcionActual;
             
             bool writeSuccess = BLEManager::getInstance()->writeCharacteristic(valor);
-            if (writeSuccess) {
-                M5.Lcd.printf("\nValor escrito correctamente: %c", valor);
-            } else {
-                M5.Lcd.println("\nError al escribir el valor");
-                if (!BLEManager::getInstance()->canWrite()) {
-                    M5.Lcd.println("La caracteristica no esta lista para escribir");
-                }
-            }
   
-           //const char* opcion = opciones[opcionActual];
            unsigned char valorASCII = 'A' + opcionActual;
            BLEManager::getInstance()->updateAdvertising(&valorASCII);
 
-           M5.Lcd.printf("\nEnviando opcion: %c en el advertising", valorASCII);
         }
     }
 
