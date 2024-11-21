@@ -18,6 +18,9 @@ bool opcionSeleccionada = false;
 unsigned long tiempoSeleccion = 0;
 const unsigned long tiempoEspera = 7000;
 bool bleConnected = false;
+unsigned long lastUpdateTime = 0; //momento d la ultima actualizacion
+const unsigned long resetInterval = 15000; 
+unsigned char currentValue = 0x00;
 
 
 class BLEManager {
@@ -63,21 +66,27 @@ public:
         BLE.advertise();
     }
 
+    bool writeCharacteristic(unsigned char valor) {
+        if (testCharacteristic.writeValue(valor)) {
+            currentValue = valor;
+            lastUpdateTime = millis();
+            return true;
+        }
+        return false;
+    }
+    
     void loopBLE() {
       BLEDevice central = BLE.central();
       if (central) {
         bleConnected = true;
-        //M5.Lcd.println("Connected to central");
       }
-
       if (!bleConnected) {
-        //M5.Lcd.println("Central disconnected. Waiting for new connections...");
         BLE.advertise();
       }
-    }
 
-    bool writeCharacteristic(unsigned char valor) {
-        return testCharacteristic.writeValue(valor);
+      if(currentValue != 0x00 && millis() - lastUpdateTime > resetInterval) {
+        writeCharacteristic(0x00);
+      }
     }
 
     bool canWrite() {
@@ -88,27 +97,33 @@ public:
 
 BLEManager* BLEManager::instance = nullptr;
 
+void dibujarFlechaAbajo(int x, int y) {
+    M5.Lcd.drawLine(x, y, x, y+15);      // Línea vertical
+    M5.Lcd.drawLine(x, y+20, x-5, y+15); // Punta izquierda
+    M5.Lcd.drawLine(x, y+20, x+5, y+15); // Punta derecha
+}
+
 void mostrarOpciones() {
     M5.Lcd.clear();
-    //M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextSize(6);
 
-    int x = 10;
+    int x = 20;
     int y = 50;
 
     for (int i = 0; i < numOpciones; i++) {
+        int anchoTexto = strlen(opciones[i]) * 12;
         if (i == opcionActual) {
-            M5.Lcd.setTextColor(YELLOW); // White text on yellow background
+            M5.Lcd.setTextColor(YELLOW);
+            M5.Lcd.drawLine(x, 85 + 12, x + 30, 85 + 12, WHITE); // Línea justo debajo de la letra
         } else {
             M5.Lcd.setTextColor(WHITE); // Default white text on black background
         }
         
         M5.Lcd.setCursor(x, y);
         M5.Lcd.println(opciones[i]);
-        M5.Lcd.print(" ");
 
         x += strlen(opciones[i]) * 12 + 70; // Avanza la posición X
-
+        
     }
 }
 
@@ -118,11 +133,6 @@ void reiniciarPantalla() {
     mostrarOpciones();
 }
 
-void dibujarFlechaAbajo(int x, int y) {
-    M5.Lcd.drawLine(x, y, x, y+15);      // Línea vertical
-    M5.Lcd.drawLine(x, y+20, x-5, y+15); // Punta izquierda
-    M5.Lcd.drawLine(x, y+20, x+5, y+15); // Punta derecha
-}
 
 void setup() {
     M5.begin();
@@ -142,12 +152,14 @@ void loop() {
         reiniciarPantalla();
     }
 
+    /*
     if(opcionSeleccionada) {
         unsigned long tiempoActual = millis();
         if (tiempoActual - tiempoSeleccion >= 12000){
             reiniciarPantalla();
         }
     }
+    * */
 
     if (!opcionSeleccionada) {
         if (M5.BtnB.wasPressed()) {
@@ -156,7 +168,7 @@ void loop() {
         }
         if (M5.BtnA.wasPressed()) {
             opcionSeleccionada = true;
-            tiempoSeleccion = millis();
+            //tiempoSeleccion = millis();
 
             M5.Lcd.clear();
             M5.Lcd.setTextColor(WHITE);
@@ -165,12 +177,13 @@ void loop() {
             M5.Lcd.printf("Opcion seleccionada");
 
             M5.Lcd.setTextSize(6);
-            M5.Lcd.setCursor(100,50);
+            M5.Lcd.setCursor(100,40);
             M5.Lcd.printf("%c", 'A'+opcionActual);
 
+            M5.Lcd.drawLine(0, 100, M5.Lcd.width(), 100, WHITE);
             M5.Lcd.setTextSize(1.5);
             M5.Lcd.setCursor(60, 110);
-            M5.Lcd.printf("Pulsa ");
+            M5.Lcd.printf("Manten ");
             dibujarFlechaAbajo(M5.Lcd.getCursorX(), M5.Lcd.getCursorY());
             M5.Lcd.printf(" para volver");
             
