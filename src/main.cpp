@@ -61,7 +61,6 @@ public:
         BLE.stopAdvertise();
         byte manufacturerData[1];
         manufacturerData[0] = 'A' + opcionActual; //si la opcion falla revisar esto
-        //manufacturerData[1] = strlen(opcion);
         BLE.setManufacturerData(manufacturerData, sizeof(manufacturerData));
         BLE.advertise();
     }
@@ -98,9 +97,9 @@ public:
 BLEManager* BLEManager::instance = nullptr;
 
 void dibujarFlechaAbajo(int x, int y) {
-    M5.Lcd.drawLine(x, y, x, y+15);      // Línea vertical
-    M5.Lcd.drawLine(x, y+20, x-5, y+15); // Punta izquierda
-    M5.Lcd.drawLine(x, y+20, x+5, y+15); // Punta derecha
+    M5.Lcd.drawLine(x, y, x, y+15);      
+    M5.Lcd.drawLine(x, y+20, x-5, y+15); 
+    M5.Lcd.drawLine(x, y+20, x+5, y+15); 
 }
 
 void mostrarOpciones() {
@@ -114,15 +113,15 @@ void mostrarOpciones() {
         int anchoTexto = strlen(opciones[i]) * 12;
         if (i == opcionActual) {
             M5.Lcd.setTextColor(YELLOW);
-            M5.Lcd.drawLine(x, 85 + 12, x + 30, 85 + 12, WHITE); // Línea justo debajo de la letra
+            M5.Lcd.drawLine(x, 85 + 12, x + 30, 85 + 12, WHITE); //subrayado
         } else {
-            M5.Lcd.setTextColor(WHITE); // Default white text on black background
+            M5.Lcd.setTextColor(WHITE); 
         }
         
         M5.Lcd.setCursor(x, y);
         M5.Lcd.println(opciones[i]);
 
-        x += strlen(opciones[i]) * 12 + 70; // Avanza la posición X
+        x += strlen(opciones[i]) * 12 + 70; //avanza pos x
         
     }
 }
