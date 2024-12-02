@@ -69,7 +69,7 @@ public:
         if (testCharacteristic.writeValue(valor)) {
             currentValue = valor;
             lastUpdateTime = millis();
-            return true;
+            return true; 
         }
         return false;
     }
@@ -83,9 +83,9 @@ public:
         BLE.advertise();
       }
 
-      if(currentValue != 0x00 && millis() - lastUpdateTime > resetInterval) {
-        writeCharacteristic(0x00);
-      }
+      //if(currentValue != 'N' && millis() - lastUpdateTime > resetInterval) {
+        //writeCharacteristic('N');
+      //}
     }
 
     bool canWrite() {
@@ -149,6 +149,7 @@ void loop() {
 
     if(M5.BtnB.wasHold()) {
         reiniciarPantalla();
+        BLEManager::getInstance()->writeCharacteristic('N');
     }
 
     /*
