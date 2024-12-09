@@ -19,7 +19,7 @@ unsigned long tiempoSeleccion = 0;
 const unsigned long tiempoEspera = 7000;
 bool bleConnected = false;
 unsigned long lastUpdateTime = 0; //momento d la ultima actualizacion
-const unsigned long resetInterval = 15000; 
+const unsigned long resetInterval = 20000; 
 unsigned char currentValue = 0x00;
 
 
@@ -78,23 +78,33 @@ public:
       BLEDevice central = BLE.central();
       if (central) {
         bleConnected = true;
+        dibujarConexion(bleConnected);
       }
       if (!bleConnected) {
         BLE.advertise();
+        dibujarConexion(bleConnected);
       }
-
-      //if(currentValue != 'N' && millis() - lastUpdateTime > resetInterval) {
-        //writeCharacteristic('N');
-      //}
     }
 
     bool canWrite() {
         return testCharacteristic.canWrite();
     }
 
+void dibujarConexion(bool conectado) {
+    int x = 230; //Coordenadas del círculo
+    int y = 10;
+    int radio = 10;
+
+    if (conectado) {
+        M5.Lcd.fillCircle(x, y, radio, GREEN); //Círculo verde
+    } else {
+        M5.Lcd.fillCircle(x, y, radio, RED); //Limpia el área con fondo negro
+    }
+}
 };
 
 BLEManager* BLEManager::instance = nullptr;
+
 
 void dibujarFlechaAbajo(int x, int y) {
     M5.Lcd.drawLine(x, y, x, y+15);      
@@ -152,14 +162,18 @@ void loop() {
         BLEManager::getInstance()->writeCharacteristic('N');
     }
 
-    /*
+/*
     if(opcionSeleccionada) {
         unsigned long tiempoActual = millis();
-        if (tiempoActual - tiempoSeleccion >= 12000){
+        if (tiempoActual - tiempoSeleccion >= resetInterval){
             reiniciarPantalla();
+            bool reiniciar = true;
+            if (reiniciar){
+                BLEManager::getInstance()->writeCharacteristic('N');
+            }
         }
     }
-    * */
+ */   
 
     if (!opcionSeleccionada) {
         if (M5.BtnB.wasPressed()) {
@@ -173,11 +187,11 @@ void loop() {
             M5.Lcd.clear();
             M5.Lcd.setTextColor(WHITE);
             M5.Lcd.setTextSize(2);
-            M5.Lcd.setCursor(10,10);
+            M5.Lcd.setCursor(10,25);
             M5.Lcd.printf("Opcion seleccionada");
 
             M5.Lcd.setTextSize(6);
-            M5.Lcd.setCursor(100,40);
+            M5.Lcd.setCursor(110,50);
             M5.Lcd.printf("%c", 'A'+opcionActual);
 
             M5.Lcd.drawLine(0, 100, M5.Lcd.width(), 100, WHITE);
