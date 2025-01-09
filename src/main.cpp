@@ -6,9 +6,13 @@ This class implements a BLE peripheral that allows to select an option from a li
 #include <ArduinoBLE.h>
 #include <string.h>
 
+#define BATTERY_MIN_VOLTAGE 3.3
+#define BATTERY_MAX_VOLTAGE 4.2
+
 // Declaraciones de funciones
 void mostrarOpciones();
 void reiniciarPantalla();
+float obtenerPorcentajeBateria();
 
 // Declaraciones globales
 const char* opciones[] = {"A", "B", "C"};
@@ -21,6 +25,12 @@ bool bleConnected = false;
 unsigned long lastUpdateTime = 0; //momento d la ultima actualizacion
 const unsigned long resetInterval = 20000; 
 unsigned char currentValue = 0x00;
+
+float porcentajeBateriaAnterior = -1.0;
+bool prevBleConnected = false;  // Para trackear el estado anterior
+unsigned long lastConnectionCheck = 0;
+const unsigned long CONNECTION_CHECK_INTERVAL = 1000;
+
 
 
 class BLEManager {
@@ -75,6 +85,31 @@ public:
     }
     
     void loopBLE() {
+        unsigned long currentMillis = millis();
+        
+        // Solo actualizamos el estado cada CONNECTION_CHECK_INTERVAL
+        if (currentMillis - lastConnectionCheck >= CONNECTION_CHECK_INTERVAL) {
+            lastConnectionCheck = currentMillis;
+            
+            BLEDevice central = BLE.central();
+            bool currentlyConnected = central && central.connected();
+            
+            // Solo actualizamos el círculo si hay un cambio de estado
+            if (currentlyConnected != prevBleConnected) {
+                bleConnected = currentlyConnected;
+                dibujarConexion(bleConnected);
+                prevBleConnected = bleConnected;
+            }
+            
+            // Si no está conectado, aseguramos que siga en modo advertising
+            if (!bleConnected) {
+                BLE.advertise();
+            }
+        }
+    }
+
+    /*
+    void loopBLE() {
       BLEDevice central = BLE.central();
       if (central) {
         bleConnected = true;
@@ -85,26 +120,57 @@ public:
         dibujarConexion(bleConnected);
       }
     }
+    */
 
     bool canWrite() {
         return testCharacteristic.canWrite();
     }
+    
 
 void dibujarConexion(bool conectado) {
     int x = 230; //Coordenadas del círculo
     int y = 10;
     int radio = 10;
 
+    M5.Lcd.fillCircle(x, y, radio, BLACK); 
     if (conectado) {
         M5.Lcd.fillCircle(x, y, radio, GREEN); //Círculo verde
     } else {
-        M5.Lcd.fillCircle(x, y, radio, RED); //Limpia el área con fondo negro
+        M5.Lcd.fillCircle(x, y, radio, RED); 
     }
 }
 };
 
 BLEManager* BLEManager::instance = nullptr;
 
+float obtenerPorcentajeBateria(float &voltage)
+{
+    int rawReading = analogRead(38);
+    voltage = rawReading * (3.3 / 4095.0) * 2;
+
+    float batteryPercent = map(voltage * 100, BATTERY_MIN_VOLTAGE * 100, BATTERY_MAX_VOLTAGE * 100, 0, 100);
+    if (batteryPercent > 100) batteryPercent = 100;
+    if (batteryPercent < 0) batteryPercent = 0;
+
+    return batteryPercent;
+}
+
+void mostrarBateria() {
+    float voltage = 0.0;
+    float porcentajeBateria = obtenerPorcentajeBateria(voltage);
+    int x = 5;
+    int y = 5;
+
+    if (porcentajeBateria != porcentajeBateriaAnterior){
+        porcentajeBateriaAnterior = porcentajeBateria;
+    }
+
+    // Muestra los datos en la pantalla
+    M5.Lcd.fillRect(0, 0, 40, 15, BLACK);
+    M5.Lcd.setTextSize(1.5);
+    M5.Lcd.setTextColor(YELLOW);
+    M5.Lcd.setCursor(x,y);
+    M5.Lcd.printf("%.1f%%", porcentajeBateria);}
 
 void dibujarFlechaAbajo(int x, int y) {
     M5.Lcd.drawLine(x, y, x, y+15);      
@@ -140,40 +206,21 @@ void reiniciarPantalla() {
     opcionActual = 0;
     opcionSeleccionada = false;
     mostrarOpciones();
-}
-
-
-void setup() {
-    M5.begin();
-    M5.Lcd.setRotation(3);
-    M5.Lcd.fillScreen(BLACK);
-    M5.Lcd.setTextColor(WHITE);
-    M5.Lcd.setTextSize(2);
-    BLEManager::getInstance()->setupBLE();
-    mostrarOpciones();
+    BLEManager::getInstance() -> dibujarConexion(bleConnected);
 }
 
 void loop() {
     M5.update();
     BLEManager::getInstance()->loopBLE(); // NO VUELVAS A COMENTAR ESTA LINEA 
 
+    mostrarBateria();
+    BLEManager::getInstance() -> dibujarConexion(bleConnected);
+
+
     if(M5.BtnB.wasHold()) {
         reiniciarPantalla();
         BLEManager::getInstance()->writeCharacteristic('N');
-    }
-
-/*
-    if(opcionSeleccionada) {
-        unsigned long tiempoActual = millis();
-        if (tiempoActual - tiempoSeleccion >= resetInterval){
-            reiniciarPantalla();
-            bool reiniciar = true;
-            if (reiniciar){
-                BLEManager::getInstance()->writeCharacteristic('N');
-            }
-        }
-    }
- */   
+    }  
 
     if (!opcionSeleccionada) {
         if (M5.BtnB.wasPressed()) {
@@ -212,4 +259,13 @@ void loop() {
     }
 
     delay(100);
+}
+void setup() {
+    M5.begin();
+    M5.Lcd.setRotation(3);
+    M5.Lcd.fillScreen(BLACK);
+    M5.Lcd.setTextColor(WHITE);
+    M5.Lcd.setTextSize(2);
+    BLEManager::getInstance()->setupBLE();
+    mostrarOpciones();
 }
